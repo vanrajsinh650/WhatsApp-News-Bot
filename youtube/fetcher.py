@@ -45,15 +45,15 @@ def fetch_playlist_from_channels():
             "part": "snippet",
             "channelId": channel_id,
             "maxResults": 50,
-            "key": YOUTUBE_KEY
+            "key": YOUTUBE_KEY,
         }
 
         try:
             response = requests.get(url, params=params)
             response.raise_for_status()
             items = response.json().get("items", [])
+            
             new_ids = [item["id"] for item in items]
-
             old_ids = playlists.get(topic, [])
             combined_ids = list(set(old_ids + new_ids))
 
@@ -78,14 +78,13 @@ def fetch_playlist_from_channels():
         print("No changes to playlist.json")
 
 
-
 def fetch_latest_video_from_playlist(playlist_id):
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
         "part": "snippet",
         "playlistId": playlist_id,
         "maxResults": 1,
-        "key": YOUTUBE_KEY
+        "key": YOUTUBE_KEY,
     }
 
     try:
@@ -98,22 +97,6 @@ def fetch_latest_video_from_playlist(playlist_id):
     except requests.exceptions.RequestException as e:
         print(f"Error fetching playlist {playlist_id}: {e}")
         return None
-
-
-def get_latest_videos(playlists):
-    url = "https://www.googleapis.com/youtube/v3/playlistItems"
-
-    for topic, playlist_ids in playlists.items():
-        for playlist_id in playlist_ids:
-            item = fetch_latest_video_from_playlist(playlist_id)
-            if item:
-                item = data["items"][0]
-                title = item["snippet"]["title"]
-                video_id = item["snippet"]["resourceId"]["videoId"]
-                video_url = f"https://www.youtube.com/watch?v={video_id}"
-                print(f"[{topic}] Latest video: {title}\nURL: {video_url}\n")
-            else:
-                print(f"[{topic}] No videos found in playlist {playlist_id}")
 
 
 def load_seen_videos():
@@ -172,10 +155,11 @@ def new_video(playlists):
     return new_videos
 
 
-if __name__ == "__main__":
-    playlists = load_playlist()
-    print("Checking for new videos...\n")
+def check_for_updates():
+    print("\nRunning at:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
+    fetch_playlist_from_channels()
+    playlists = load_playlist()
     new = new_video(playlists)
 
     if new:
@@ -184,3 +168,14 @@ if __name__ == "__main__":
             print(f"[{video['topic']}] {video['title']} → {video['url']}")
     else:
         print("No new videos.")
+
+
+# every 10 minutes
+fetch_playlist_from_channels()
+schedule.every(10).minutes.do(check_for_updates)
+
+print("YouTube Video Watcher Started...\n")
+
+while True:
+    schedule.run_pending()
+    time.sleep(1)
