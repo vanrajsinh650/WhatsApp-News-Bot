@@ -1,5 +1,8 @@
 from dotenv import load_dotenv, find_dotenv
 from pathlib import Path
+from datetime import datetime
+import schedule
+import time
 import requests
 import json
 import os
@@ -10,9 +13,10 @@ YOUTUBE_KEY = os.getenv("YOUTUBE_API")
 
 playlist_file = os.path.join(os.path.dirname(__file__), "playlist.json")
 seen_videos_file = os.path.join(os.path.dirname(__file__), "seen_videos.json")
+channels_file = os.path.join(os.path.dirname(__file__), "channels.json")
 
 
-def load_channels():
+def load_playlist():
     try:
         with open(playlist_file, "r") as f:
             data = json.load(f)
@@ -22,13 +26,66 @@ def load_channels():
         return []
 
 
+def fetch_playlist_from_channels():
+    playlists = load_playlist()
+
+    try:
+        with open(channels_file, "r") as f:
+            data = json.load(f)
+            channels = data.get("channels", {})
+    except Exception as e:
+        print("Error loading channels.json:", e)
+        return
+
+    updated = False
+
+    for topic, channel_id in channels.items():
+        url = "https://www.googleapis.com/youtube/v3/playlists"
+        params = {
+            "part": "snippet",
+            "channelId": channel_id,
+            "maxResults": 50,
+            "key": YOUTUBE_KEY
+        }
+
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            items = response.json().get("items", [])
+            new_ids = [item["id"] for item in items]
+
+            old_ids = playlists.get(topic, [])
+            combined_ids = list(set(old_ids + new_ids))
+
+            if set(combined_ids) != set(old_ids):
+                playlists[topic] = combined_ids
+                print(f"Updated playlists for {topic} ({len(combined_ids)} total)")
+                updated = True
+            else:
+                print(f"No new playlists for {topic}")
+
+        except Exception as e:
+            print(f"Error fetching playlists for {topic}: {e}")
+
+    if updated:
+        try:
+            with open(playlist_file, "w") as f:
+                json.dump({"playlists": playlists}, f, indent=2)
+            print("Saved updated playlists to playlist.json")
+        except Exception as e:
+            print("Error saving playlist.json:", e)
+    else:
+        print("No changes to playlist.json")
+
+
+
 def fetch_latest_video_from_playlist(playlist_id):
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
         "part": "snippet",
         "playlistId": playlist_id,
         "maxResults": 1,
-        "key": YOUTUBE_KEY,
+        "key": YOUTUBE_KEY
     }
 
     try:
@@ -116,7 +173,7 @@ def new_video(playlists):
 
 
 if __name__ == "__main__":
-    playlists = load_channels()
+    playlists = load_playlist()
     print("Checking for new videos...\n")
 
     new = new_video(playlists)
