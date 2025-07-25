@@ -1,11 +1,17 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from dotenv import load_dotenv, find_dotenv
 from pathlib import Path
 from datetime import datetime
+from whatsapp.message import send_message
 import schedule
 import time
 import requests
 import json
-import os
+
 
 load_dotenv()
 
@@ -14,6 +20,8 @@ YOUTUBE_KEY = os.getenv("YOUTUBE_API")
 playlist_file = os.path.join(os.path.dirname(__file__), "playlist.json")
 seen_videos_file = os.path.join(os.path.dirname(__file__), "seen_videos.json")
 channels_file = os.path.join(os.path.dirname(__file__), "channels.json")
+
+video_queue = []
 
 
 def load_playlist():
@@ -156,6 +164,7 @@ def new_video(playlists):
 
 
 def check_for_updates():
+    global video_queue
     print("\nRunning at:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     fetch_playlist_from_channels()
@@ -164,15 +173,26 @@ def check_for_updates():
 
     if new:
         print("NEW VIDEOS FOUND:")
+        video_queue.extend(new)
         for video in new:
             print(f"[{video['topic']}] {video['title']} → {video['url']}")
-    else:
-        print("No new videos.")
+        else:
+            print("No new videos.")
+        
+def send_next_video_from_queue():
+    global video_queue
+    
+    if video_queue:
+        video = video_queue.pop(0)
+        msg = f"new video in {video['topic']}!\n {video['title']}\n {video['url']}"
+        send_message(msg)
+    
 
 
 # every 10 minutes
 fetch_playlist_from_channels()
-schedule.every(10).minutes.do(check_for_updates)
+schedule.every(1).minutes.do(check_for_updates)
+schedule.every(1).minutes.do(send_next_video_from_queue)
 
 print("YouTube Video Watcher Started...\n")
 
