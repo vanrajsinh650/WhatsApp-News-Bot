@@ -13,12 +13,15 @@ This is a Python automation project that detects new YouTube videos from specifi
 
 ├── whatsapp/
 │ └── message.py # Function to send message via WhatsApp (Twilio)
+
 ├── youtube/
 │ ├── fetcher.py # Main script to fetch & filter new videos
 │ ├── playlist.json # List of YouTube playlists with topic names
 │ ├── seen_videos.json # Stores video IDs already sent
 │ └── channels.json # (Optional) List of channel URLs (not used here)
+
 ├── .env # Stores YouTube and Twilio API credentials
+
 ├── requirement.txt # All dependencies
 
 
@@ -28,9 +31,9 @@ This is a Python automation project that detects new YouTube videos from specifi
    ```bash
    pip install -r requirement.txt
 
-## run the bot
-
- ```python youtube/fetcher.py
+2. run the bot
+   ```bash
+   python youtube/fetcher.py
 
 
 ## Tech Stack
