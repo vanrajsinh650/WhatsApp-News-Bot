@@ -30,7 +30,7 @@ This is a Python automation project that detects new YouTube videos from specifi
 
 ## run the bot
 
-python youtube/fetcher.py
+ ```python youtube/fetcher.py
 
 
 ## Tech Stack
